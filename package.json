@@ -1,0 +1,29 @@
+{
+  "name": "agentmesh",
+  "private": true,
+  "type": "module",
+  "packageManager": "bun@1.2.20",
+  "workspaces": [
+    "apps/*",
+    "cli",
+    "agents/*",
+    "packages/*",
+    "mcp/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "test": "turbo run test",
+    "eval": "turbo run eval",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "typecheck": "tsc --build"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.2.0",
+    "@types/node": "^24.0.0",
+    "bun-types": "^1.4.2",
+    "turbo": "^2.5.6",
+    "typescript": "^5.9.2"
+  }
+}

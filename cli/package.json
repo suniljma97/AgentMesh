@@ -1,0 +1,13 @@
+{
+  "name": "@agentmesh/cli",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run index.ts",
+    "build": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@agentmesh/shared": "workspace:*"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "@agentmesh/config",
+  "private": true,
+  "type": "module",
+  "main": "src/env.ts",
+  "types": "src/env.ts",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "zod": "^4.1.0"
+  }
+}
