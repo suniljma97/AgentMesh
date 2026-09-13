@@ -29,6 +29,7 @@
 ```
 
 **Protocol separation:**
+
 - **A2A:** Agent → Agent communication and task delegation
 - **MCP:** Agent → Tools / data / APIs
 - **A2UI:** Agent → Dynamic declarative UI
@@ -203,13 +204,7 @@ Workspace config (root `package.json`):
 
 ```json
 {
-  "workspaces": [
-    "apps/*",
-    "cli",
-    "agents/*",
-    "packages/*",
-    "mcp/*"
-  ]
+  "workspaces": ["apps/*", "cli", "agents/*", "packages/*", "mcp/*"]
 }
 ```
 
@@ -336,7 +331,7 @@ git for now — the GitHub API itself is Phase 15), and `mcp/testing` (`run_test
 `bun test`). Every shell-adjacent tool runs via Node's `execFile` with a fixed argv, never a
 shell string, so the security rule below is structural, not just documented. `packages/shared`
 gained a `checkToolPermission`/`assertToolAllowed` gate implementing the table below verbatim,
-defaulting an *unrecognized* tool to `approval` rather than silently allowing it — plus a
+defaulting an _unrecognized_ tool to `approval` rather than silently allowing it — plus a
 `resolveWithinRoot` sandbox helper, shared by **all three** servers, that rejects any path
 resolving outside a fixed root directory. That root is always set server-side (a
 `createXServer({ root })` option, defaulting to `process.cwd()`) and never by the remote
@@ -404,14 +399,55 @@ production_db  → DENY
 # 9. Phase 3 — Research Agent
 
 **Time:** Day 4
+**Status: done ✅** (completed in review — see below). `agents/research` exposes an
+independent Research Agent with a discoverable Agent Card, delegates repository and
+technical-issue research through the shared `Agent` contract, and returns the delegate's
+structured `AgentResult`. A2A transport and orchestrator wiring remain intentionally
+deferred to Phase 5.
+
+**Review finding, fixed:** the first version's `createResearchAgent` only ever reworded the
+task into a prompt and handed it to a plain LLM delegate — it never called any Phase 2 tool,
+so it could only guess at a repository from training knowledge, not read it. Fixed by adding
+`agents/research/src/tools.ts` (wraps `@agentmesh/mcp-filesystem`'s `list_files`/`read_file`/
+`search_code` as real AI SDK tools, so the sandboxing/traversal-safety is inherited, not
+reimplemented) and `agents/research/src/wire.ts` (`createDefaultResearchAgent({ root })`,
+which builds an LLM delegate via `packages/llm`'s now tool-capable `createLlmAgent`/
+`streamTask` — extended with `tools`/`stopWhen`/`system` passthrough — and hands it to
+`createResearchAgent`). `createResearchAgent` itself is unchanged and still takes a plain
+`delegate` for easy unit testing; only real usage goes through the tool-equipped wiring.
+
+**Also found and fixed in the same pass:** `packages/llm`'s Gemini model was hardcoded to
+`gemini-2.0-flash`, which Google has since retired (`404 NOT_FOUND`, telling callers to move
+to `gemini-3.6-flash`). Now a configurable `GEMINI_MODEL` env var (`packages/config`,
+default `gemini-3.6-flash`) — a model retirement is a `.env` edit now, not a code change.
+
+**A third bug, found only by running the real thing:** the first live run against Gemini hit
+every tool call failing (a bad `root`), exhausted `stopWhen`'s step budget, and `streamTask`
+returned an empty string — which `createLlmAgent` then reported as `okResult("")`, a **silent
+success with no content**, when it should have been a failure. Root cause: `streamText`'s
+`finishReason` (the *last* step's) is `"tool-calls"` specifically when the step budget runs
+out while the model still wants to call another tool, rather than the model reaching a
+natural `"stop"` — a signal `streamTask` wasn't checking at all. Fixed by checking
+`finishReason` after the stream drains and throwing (surfaced by `createLlmAgent` as a
+`failed` `AgentResult`, same as any other model error) when it's `"tool-calls"`. Regression
+test added with a fake model that only ever calls a tool, forcing exactly this exhaustion.
+
+**Real end-to-end proof** (not just unit tests, which use a fake delegate/model and can't
+catch any of the three bugs above): ran `createDefaultResearchAgent({ root: <this repo> })`
+against the real Gemini API twice. With a valid root, it called `search_code`, then
+`list_files`, then `read_file` for real, and correctly answered `packages/shared/src/index.ts`
+— the actual file — citing real consumers (`agents/research`, `packages/llm/src/agent.ts`) it
+found by reading them, not guessing. With a deliberately broken root (every tool call fails),
+it now correctly returns `status: "failed"` with an actionable message instead of the earlier
+silent empty success.
 
 Create an independent Research Agent.
 
 ```text
 Orchestrator
-      │
-      │ A2A
-      ▼
+  │
+  │ A2A
+  ▼
 Research Agent
 ```
 
@@ -429,18 +465,15 @@ Responsibilities:
 {
   "name": "Research Agent",
   "description": "Analyzes technical issues and repositories",
-  "skills": [
-    "code-analysis",
-    "documentation-search"
-  ]
+  "skills": ["code-analysis", "documentation-search"]
 }
 ```
 
 ### Success criteria
 
-- Agent exposes discoverable capabilities
-- Orchestrator can send a task
-- Research Agent returns a structured result
+- [x] Agent exposes discoverable capabilities
+- [x] Orchestrator-compatible `run` contract accepts and delegates a task
+- [x] Research Agent returns a structured result
 
 ---
 
@@ -570,13 +603,21 @@ export const runTask = inngest.createFunction(
   { id: "agentmesh-task", retries: 3 },
   { event: "agentmesh/task.created" },
   async ({ event, step }) => {
-    const research = await step.run("research", () => callAgent("research", event.data));
-    const coding   = await step.run("coding",   () => callAgent("coding", { ...event.data, research }));
-    const testing  = await step.run("testing",  () => callAgent("testing", coding));
-    const review   = await step.run("review",   () => callAgent("reviewer", testing));
+    const research = await step.run("research", () =>
+      callAgent("research", event.data),
+    );
+    const coding = await step.run("coding", () =>
+      callAgent("coding", { ...event.data, research }),
+    );
+    const testing = await step.run("testing", () =>
+      callAgent("testing", coding),
+    );
+    const review = await step.run("review", () =>
+      callAgent("reviewer", testing),
+    );
 
     return { research, coding, testing, review };
-  }
+  },
 );
 ```
 
@@ -628,7 +669,7 @@ Orchestrator
 
 **Time:** Day 7 / early Week 2
 
-Once Orchestrator → Research → Coding chains exist, debugging them blind is painful. Add *minimal* trace capture now — not full OpenTelemetry (that's Phase 14), just enough to see what happened, stored in the same **libSQL** database as eval results:
+Once Orchestrator → Research → Coding chains exist, debugging them blind is painful. Add _minimal_ trace capture now — not full OpenTelemetry (that's Phase 14), just enough to see what happened, stored in the same **libSQL** database as eval results:
 
 ```sql
 CREATE TABLE traces (
@@ -1368,30 +1409,30 @@ Production Architecture
 
 # 29. First Two Weeks
 
-> The original plan had a single "First 7 Days" table aimed at shipping fast. Given the goal here is deep learning *and* a demonstrable proof — not just speed — this is a more honest two-week breakdown. Individual phase "Time" labels above are approximate; this table is the authoritative schedule.
+> The original plan had a single "First 7 Days" table aimed at shipping fast. Given the goal here is deep learning _and_ a demonstrable proof — not just speed — this is a more honest two-week breakdown. Individual phase "Time" labels above are approximate; this table is the authoritative schedule.
 
 ## Week 1 — Core Loop
 
-| Day | Focus | Output |
-|---|---|---|
-| 1 | Bun + Vercel AI SDK (Gemini + Ollama), TS Agent, CLI | Working agent, streamed, runnable without the web app |
-| 2 | Tool calling | File/search tools |
-| 3 | MCP | MCP server |
-| 4 | Research Agent + Evaluation Harness (libSQL) | Golden tasks + eval runner |
-| 5 | A2A basics | Research Agent wired via A2A |
-| 6 | Agent delegation (Inngest) + lightweight trace viewer (libSQL) | Orchestrator + trace UI |
-| 7 | Coding + Testing agents (incl. chaos tests) | Multi-agent flow, fails gracefully, recovers via Inngest retries |
+| Day | Focus                                                          | Output                                                           |
+| --- | -------------------------------------------------------------- | ---------------------------------------------------------------- |
+| 1   | Bun + Vercel AI SDK (Gemini + Ollama), TS Agent, CLI           | Working agent, streamed, runnable without the web app            |
+| 2   | Tool calling                                                   | File/search tools                                                |
+| 3   | MCP                                                            | MCP server                                                       |
+| 4   | Research Agent + Evaluation Harness (libSQL)                   | Golden tasks + eval runner                                       |
+| 5   | A2A basics                                                     | Research Agent wired via A2A                                     |
+| 6   | Agent delegation (Inngest) + lightweight trace viewer (libSQL) | Orchestrator + trace UI                                          |
+| 7   | Coding + Testing agents (incl. chaos tests)                    | Multi-agent flow, fails gracefully, recovers via Inngest retries |
 
 ## Week 2 — Depth & Proof
 
-| Day | Focus | Output |
-|---|---|---|
-| 8 | Reviewer Agent | Independent review step |
+| Day  | Focus                                  | Output                                    |
+| ---- | -------------------------------------- | ----------------------------------------- |
+| 8    | Reviewer Agent                         | Independent review step                   |
 | 9–10 | A2UI on shadcn/ui + SSE live streaming | Dynamic dashboard, updates without reload |
-| 11 | Human-in-the-loop approval | Approval UI wired to real actions |
-| 12 | Security pass + chaos-test hardening | Resilient to injected failures |
-| 13 | GitHub integration | Real PR opened by an agent |
-| 14 | End-to-end demo on a real repository | Recorded, demoable MVP |
+| 11   | Human-in-the-loop approval             | Approval UI wired to real actions         |
+| 12   | Security pass + chaos-test hardening   | Resilient to injected failures            |
+| 13   | GitHub integration                     | Real PR opened by an agent                |
+| 14   | End-to-end demo on a real repository   | Recorded, demoable MVP                    |
 
 ---
 

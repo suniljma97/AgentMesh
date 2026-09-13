@@ -1,21 +1,22 @@
 import type { Agent, AgentInput, AgentResult } from "@agentmesh/shared";
 import { failResult, okResult } from "@agentmesh/shared";
-import type { LanguageModelV2 } from "@ai-sdk/provider";
-import { streamTask } from "./index.js";
+import { type StreamTaskOptions, streamTask } from "./index.js";
 
-export interface LlmAgentOptions {
+export interface LlmAgentOptions extends StreamTaskOptions {
   /** Called with each streamed chunk as it arrives (e.g. to print live output). */
   onChunk?: (chunk: string) => void;
-  /** Override the model (defaults to the env-configured provider). Mainly for tests. */
-  model?: LanguageModelV2;
 }
 
 /**
  * Wraps streamTask behind the shared Agent interface: takes an AgentInput,
  * drives the same streamed LLM call, and returns a structured AgentResult
- * instead of raw text chunks.
+ * instead of raw text chunks. Any streamText option (model override, tools,
+ * stopWhen, ...) can be passed through — e.g. the Research Agent uses this to
+ * give the model real file-access tools instead of just a bare prompt.
  */
 export function createLlmAgent(options: LlmAgentOptions = {}): Agent {
+  const { onChunk, ...streamOptions } = options;
+
   return {
     name: "llm-agent",
     description:
@@ -25,13 +26,9 @@ export function createLlmAgent(options: LlmAgentOptions = {}): Agent {
       let text = "";
 
       try {
-        const chunks = options.model
-          ? streamTask(input.task, options.model)
-          : streamTask(input.task);
-
-        for await (const chunk of chunks) {
+        for await (const chunk of streamTask(input.task, streamOptions)) {
           text += chunk;
-          options.onChunk?.(chunk);
+          onChunk?.(chunk);
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

@@ -12,6 +12,16 @@
         "typescript": "^5.9.2",
       },
     },
+    "agents/research": {
+      "name": "@agentmesh/research-agent",
+      "dependencies": {
+        "@agentmesh/llm": "workspace:*",
+        "@agentmesh/mcp-filesystem": "workspace:*",
+        "@agentmesh/shared": "workspace:*",
+        "ai": "^5.0.0",
+        "zod": "^4.1.0",
+      },
+    },
     "apps/web": {
       "name": "@agentmesh/web",
       "dependencies": {
@@ -80,6 +90,7 @@
         "@ai-sdk/provider": "^2.0.0",
         "ai": "^5.0.0",
         "ollama-ai-provider-v2": "1.5.5",
+        "zod": "^4.1.0",
       },
     },
     "packages/shared": {
@@ -98,6 +109,8 @@
     "@agentmesh/mcp-github": ["@agentmesh/mcp-github@workspace:mcp/github"],
 
     "@agentmesh/mcp-testing": ["@agentmesh/mcp-testing@workspace:mcp/testing"],
+
+    "@agentmesh/research-agent": ["@agentmesh/research-agent@workspace:agents/research"],
 
     "@agentmesh/shared": ["@agentmesh/shared@workspace:packages/shared"],
 
@@ -915,15 +928,9 @@
 
     "yoctocolors": ["yoctocolors@2.2.0", "", {}, "sha512-xYqdZFUK/VYazNl/oCDYN+3WloWQwMfZxBoiNt6qNyk+xfOdi598muWE42rNZFp1kNOiqW936q5RhUdnpqElSg=="],
 
-    "zod": ["zod@4.6.2", "", {}, "sha512-lh5RCAGFa1Cm2hjtNwLQhSs/AsqdWnTQaBER9fEwN/88pSh7KOtJavtBx/0VlkN/uFd61SwYmljLMDAsHlvzBQ=="],
+    "zod": ["zod@4.6.4", "", {}, "sha512-AXSD6hvGdvRjajG/l1cC+d6IrhH+sjmPKtYeQdJIK8MFJl3LyClzS+o/YsVC+zQZPupAaeH5skwwm8YqYH7BqA=="],
 
     "zod-to-json-schema": ["zod-to-json-schema@3.25.2", "", { "peerDependencies": { "zod": "^3.25.28 || ^4" } }, "sha512-O/PgfnpT1xKSDeQYSCfRI5Gy3hPf91mKVDuYLUHZJMiDFptvP41MSnWofm8dnCm0256ZNfZIM7DSzuSMAFnjHA=="],
-
-    "@agentmesh/mcp-filesystem/zod": ["zod@4.6.4", "", {}, "sha512-AXSD6hvGdvRjajG/l1cC+d6IrhH+sjmPKtYeQdJIK8MFJl3LyClzS+o/YsVC+zQZPupAaeH5skwwm8YqYH7BqA=="],
-
-    "@agentmesh/mcp-github/zod": ["zod@4.6.4", "", {}, "sha512-AXSD6hvGdvRjajG/l1cC+d6IrhH+sjmPKtYeQdJIK8MFJl3LyClzS+o/YsVC+zQZPupAaeH5skwwm8YqYH7BqA=="],
-
-    "@agentmesh/mcp-testing/zod": ["zod@4.6.4", "", {}, "sha512-AXSD6hvGdvRjajG/l1cC+d6IrhH+sjmPKtYeQdJIK8MFJl3LyClzS+o/YsVC+zQZPupAaeH5skwwm8YqYH7BqA=="],
 
     "@ai-sdk/provider-utils/undici": ["undici@5.29.0", "", { "dependencies": { "@fastify/busboy": "^2.0.0" } }, "sha512-raqeBD6NQK4SkWhQzeYKd1KmIG6dllBOTt55Rmkt4HtI9mwdWtJljnrXjAFUBLTSN67HWrOIZ3EPF4kjUw80Bg=="],
 

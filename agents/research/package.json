@@ -1,5 +1,5 @@
 {
-  "name": "@agentmesh/llm",
+  "name": "@agentmesh/research-agent",
   "private": true,
   "type": "module",
   "main": "src/index.ts",
@@ -9,12 +9,10 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@agentmesh/config": "workspace:*",
+    "@agentmesh/llm": "workspace:*",
+    "@agentmesh/mcp-filesystem": "workspace:*",
     "@agentmesh/shared": "workspace:*",
-    "@ai-sdk/google": "^2.0.0",
-    "@ai-sdk/provider": "^2.0.0",
     "ai": "^5.0.0",
-    "ollama-ai-provider-v2": "1.5.5",
     "zod": "^4.1.0"
   }
 }

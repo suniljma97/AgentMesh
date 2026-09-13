@@ -7,6 +7,7 @@ describe("environmentSchema", () => {
     expect(parsed.LLM_PROVIDER).toBe("ollama");
     expect(parsed.OLLAMA_BASE_URL).toBe("http://localhost:11434/api");
     expect(parsed.OLLAMA_MODEL).toBe("qwen2.5:7b");
+    expect(parsed.GEMINI_MODEL).toBe("gemini-3.6-flash");
   });
 
   test("rejects an unknown LLM_PROVIDER", () => {

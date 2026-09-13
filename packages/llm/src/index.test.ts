@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { LanguageModelV2 } from "@ai-sdk/provider";
+import { stepCountIs, tool } from "ai";
+import { z } from "zod";
 import { getModel, streamTask } from "./index.js";
 
 function fakeModel(overrides: Partial<LanguageModelV2> = {}): LanguageModelV2 {
@@ -18,17 +20,58 @@ function fakeModel(overrides: Partial<LanguageModelV2> = {}): LanguageModelV2 {
   } as LanguageModelV2;
 }
 
+/** A model that only ever calls a tool, never producing a final text answer. */
+function alwaysCallsToolModel(): LanguageModelV2 {
+  return fakeModel({
+    doStream: async () => ({
+      stream: new ReadableStream({
+        start(controller) {
+          controller.enqueue({
+            type: "tool-call",
+            toolCallId: "1",
+            toolName: "noop",
+            input: "{}",
+          });
+          controller.enqueue({
+            type: "finish",
+            finishReason: "tool-calls",
+            usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+          });
+          controller.close();
+        },
+      }),
+    }),
+  });
+}
+
+async function collect(chunks: AsyncGenerator<string>): Promise<string[]> {
+  const out: string[] = [];
+  for await (const chunk of chunks) out.push(chunk);
+  return out;
+}
+
 describe("streamTask", () => {
   test("propagates a model error instead of silently yielding nothing", async () => {
-    const collect = async () => {
-      const chunks: string[] = [];
-      for await (const chunk of streamTask("test task", fakeModel())) {
-        chunks.push(chunk);
-      }
-      return chunks;
-    };
+    await expect(
+      collect(streamTask("test task", { model: fakeModel() })),
+    ).rejects.toThrow("fake model failure");
+  });
 
-    await expect(collect()).rejects.toThrow("fake model failure");
+  test("fails loudly when the tool-call step budget runs out without a final answer", async () => {
+    const noop = tool({
+      inputSchema: z.object({}),
+      execute: async () => "ok",
+    });
+
+    await expect(
+      collect(
+        streamTask("test task", {
+          model: alwaysCallsToolModel(),
+          tools: { noop },
+          stopWhen: stepCountIs(2),
+        }),
+      ),
+    ).rejects.toThrow(/ran out of tool-call steps/);
   });
 });
 
