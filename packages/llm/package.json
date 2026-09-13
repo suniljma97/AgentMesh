@@ -10,7 +10,10 @@
   },
   "dependencies": {
     "@agentmesh/config": "workspace:*",
+    "@agentmesh/shared": "workspace:*",
     "@ai-sdk/google": "^2.0.0",
-    "ai": "^5.0.0"
+    "@ai-sdk/provider": "^2.0.0",
+    "ai": "^5.0.0",
+    "ollama-ai-provider-v2": "1.5.5"
   }
 }

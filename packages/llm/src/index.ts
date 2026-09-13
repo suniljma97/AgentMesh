@@ -1,34 +1,22 @@
 import { env } from "@agentmesh/config";
 import { google } from "@ai-sdk/google";
-import { type LanguageModel, streamText } from "ai";
+import type { LanguageModelV2 } from "@ai-sdk/provider";
+import { streamText } from "ai";
+import { createOllama } from "ollama-ai-provider-v2";
 
-const ollama = {
-  baseURL: env.OLLAMA_BASE_URL,
-  model: env.OLLAMA_MODEL,
-};
-
-function getModel(): LanguageModel {
+export function getModel(): LanguageModelV2 {
   if (env.LLM_PROVIDER === "gemini") {
     return google("gemini-2.0-flash");
   }
 
-  return {
-    specificationVersion: "v2",
-    provider: "ollama",
-    modelId: ollama.model,
-    supportedUrls: {},
-    defaultObjectGenerationMode: "json",
-    doGenerate: async () => {
-      throw new Error("Ollama provider is not yet implemented in Phase 1");
-    },
-    doStream: async () => {
-      throw new Error("Ollama provider is not yet implemented in Phase 1");
-    },
-  } as LanguageModel;
+  const ollama = createOllama({ baseURL: env.OLLAMA_BASE_URL });
+  return ollama(env.OLLAMA_MODEL);
 }
 
-export async function* streamTask(task: string): AsyncGenerator<string> {
-  const model = getModel();
+export async function* streamTask(
+  task: string,
+  model: LanguageModelV2 = getModel(),
+): AsyncGenerator<string> {
   let streamError: unknown;
 
   // streamText's default onError only logs and swallows the error — .textStream
@@ -49,3 +37,5 @@ export async function* streamTask(task: string): AsyncGenerator<string> {
     throw streamError;
   }
 }
+
+export { createLlmAgent } from "./agent.js";

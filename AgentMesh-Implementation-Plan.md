@@ -233,11 +233,14 @@ Minimal `turbo.json`:
 
 **Time:** Day 1
 
-**Status: in progress.** `packages/llm` wraps Gemini via the Vercel AI SDK (`streamTask`) and
-`cli/index.ts` streams its output; `packages/shared` already has the `Agent`/`AgentInput`/
-`AgentResult` types from the interface below. Still open: wire `streamTask` behind an actual
-`Agent` implementation (returning `AgentResult`, not raw text chunks) and implement the Ollama
-branch, which currently throws `"Ollama provider is not yet implemented in Phase 1"`.
+**Status: done ✅.** `packages/llm` wraps both Gemini (`@ai-sdk/google`) and Ollama
+(`ollama-ai-provider-v2`, pinned to `1.5.5` for LanguageModelV2 compatibility with `ai@5`)
+behind `streamTask`; `packages/llm/src/agent.ts` wires that behind the shared `Agent`
+interface (`createLlmAgent`), returning a structured `AgentResult` while still streaming
+chunks live via an `onChunk` callback. `cli/index.ts` runs through the agent. Verified
+end-to-end against a real local Ollama server: a valid model streams a real response, and
+an invalid model surfaces a clean `AgentMesh task failed: Not Found` with exit code 1 —
+confirming the earlier silent-error-swallow fix holds under a real failure, not just tests.
 
 First goal is deliberately simple:
 
@@ -314,12 +317,12 @@ This proves from day one that the core logic is UI-agnostic, and gives a much fa
 ### Success criteria
 
 - [x] Gemini API works (via AI SDK)
-- [ ] Agent accepts a task — `streamTask(task: string)` exists, but isn't wired into an `Agent` object yet
-- [ ] Agent returns structured output — currently yields raw text chunks, not `AgentResult`
-- [x] Errors are handled cleanly (try/catch in `cli/index.ts`)
+- [x] Agent accepts a task (`createLlmAgent().run({ task })`)
+- [x] Agent returns structured output (`AgentResult` via `okResult`/`failResult`)
+- [x] Errors are handled cleanly (model errors become a `failed` `AgentResult`, not a throw)
 - [x] Agent runs end-to-end via the CLI, without the web app
 - [x] Response streams token-by-token (`streamText`), visible live in CLI output
-- [ ] Swapping Gemini ⇄ Ollama requires no change to agent logic, only the env var — Ollama branch is stubbed (throws) until implemented
+- [x] Swapping Gemini ⇄ Ollama requires no change to agent logic, only the `LLM_PROVIDER` env var
 
 ---
 
@@ -1115,10 +1118,10 @@ AI SDK (Gemini / Ollama) → Agent → Streamed Response (via Bun CLI and web)
 ```
 
 - [x] Gemini connected via Vercel AI SDK
-- [ ] Ollama fallback connected (stubbed, throws "not yet implemented")
-- [ ] Agent abstraction (types exist in `packages/shared`, not yet wired to `streamTask`)
+- [x] Ollama fallback connected (`ollama-ai-provider-v2`, verified against a real local server)
+- [x] Agent abstraction (`createLlmAgent` in `packages/llm`, implements `@agentmesh/shared`'s `Agent`)
 - [x] Bun CLI entrypoint
-- [x] Structured + streamed output (streamed ✅, structured `AgentResult` ⏳)
+- [x] Structured + streamed output
 - [x] Error handling
 
 ## Milestone 2 — Tools

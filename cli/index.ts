@@ -1,4 +1,4 @@
-import { streamTask } from "@agentmesh/llm";
+import { createLlmAgent } from "@agentmesh/llm";
 
 export function parseTask(args: string[]): string | undefined {
   const [command, ...rest] = args;
@@ -18,13 +18,15 @@ if (import.meta.main) {
     process.exit(1);
   }
 
-  try {
-    for await (const chunk of streamTask(task)) {
-      process.stdout.write(chunk);
-    }
-    process.stdout.write("\n");
-  } catch (error) {
-    console.error("AgentMesh task failed:", error);
+  const agent = createLlmAgent({
+    onChunk: (chunk) => process.stdout.write(chunk),
+  });
+
+  const result = await agent.run({ task });
+  process.stdout.write("\n");
+
+  if (result.status === "failed") {
+    console.error("AgentMesh task failed:", result.message);
     process.exitCode = 1;
   }
 }
