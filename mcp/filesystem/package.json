@@ -1,0 +1,17 @@
+{
+  "name": "@agentmesh/mcp-filesystem",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "start": "bun run src/server.ts",
+    "build": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@agentmesh/shared": "workspace:*",
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "zod": "^4.1.0"
+  }
+}

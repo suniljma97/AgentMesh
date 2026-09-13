@@ -330,6 +330,27 @@ This proves from day one that the core logic is UI-agnostic, and gives a much fa
 
 **Time:** Day 2–3
 
+**Status: done ✅.** All five tools are real `@modelcontextprotocol/sdk` servers, not stubs:
+`mcp/filesystem` (`list_files`, `read_file`, `search_code`), `mcp/github` (`git_diff`, local
+git for now — the GitHub API itself is Phase 15), and `mcp/testing` (`run_tests`, wraps
+`bun test`). Every shell-adjacent tool runs via Node's `execFile` with a fixed argv, never a
+shell string, so the security rule below is structural, not just documented. `packages/shared`
+gained a `checkToolPermission`/`assertToolAllowed` gate implementing the table below verbatim,
+defaulting an *unrecognized* tool to `approval` rather than silently allowing it — plus a
+`resolveWithinRoot` sandbox helper, shared by **all three** servers, that rejects any path
+resolving outside a fixed root directory. That root is always set server-side (a
+`createXServer({ root })` option, defaulting to `process.cwd()`) and never by the remote
+caller — an initial pass on `git_diff`/`run_tests` accepted a caller-supplied `cwd` with no
+containment at all, letting a compromised caller point `bun test`/`git diff` (and anything
+`bun test` loads: `bunfig.toml`, preload scripts) at an arbitrary directory; caught in review
+and fixed before this ever shipped, with regression tests asserting the escape is rejected.
+Verified end-to-end with a real MCP `Client`↔`Server` pair over `InMemoryTransport` for all
+three servers: tool listing, successful calls, and a path-traversal attempt on each of the
+three correctly coming back as `isError: true` through the actual protocol, not just the bare
+function. Not yet built: the Docker sandbox step in the diagram below — Phase 2's tools are
+all read-only, sandboxed-by-path, or execFile-argv-isolated, so nothing currently needs a
+container; revisit once Phase 8's `edit_file` (APPROVAL-gated) is implemented.
+
 Add tools:
 
 ```text

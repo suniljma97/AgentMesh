@@ -14,6 +14,9 @@
     { "path": "./cli" },
     { "path": "./packages/shared" },
     { "path": "./packages/config" },
-    { "path": "./packages/llm" }
+    { "path": "./packages/llm" },
+    { "path": "./mcp/filesystem" },
+    { "path": "./mcp/github" },
+    { "path": "./mcp/testing" }
   ]
 }

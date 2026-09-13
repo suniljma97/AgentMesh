@@ -21,3 +21,6 @@ export function okResult(message: string, data?: unknown): AgentResult {
 export function failResult(message: string, data?: unknown): AgentResult {
   return { status: "failed", message, data };
 }
+
+export * from "./permissions.js";
+export * from "./sandbox.js";
