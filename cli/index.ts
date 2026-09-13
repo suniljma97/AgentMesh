@@ -1,3 +1,5 @@
+import { streamTask } from "@agentmesh/llm";
+
 export function parseTask(args: string[]): string | undefined {
   const [command, ...rest] = args;
 
@@ -16,6 +18,13 @@ if (import.meta.main) {
     process.exit(1);
   }
 
-  console.log(`AgentMesh task received: ${task}`);
-  console.log("Phase 1 agent execution will be connected next.");
+  try {
+    for await (const chunk of streamTask(task)) {
+      process.stdout.write(chunk);
+    }
+    process.stdout.write("\n");
+  } catch (error) {
+    console.error("AgentMesh task failed:", error);
+    process.exitCode = 1;
+  }
 }

@@ -13,6 +13,7 @@
   "references": [
     { "path": "./cli" },
     { "path": "./packages/shared" },
-    { "path": "./packages/config" }
+    { "path": "./packages/config" },
+    { "path": "./packages/llm" }
   ]
 }

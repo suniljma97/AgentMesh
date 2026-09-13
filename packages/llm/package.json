@@ -1,0 +1,16 @@
+{
+  "name": "@agentmesh/llm",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@agentmesh/config": "workspace:*",
+    "@ai-sdk/google": "^2.0.0",
+    "ai": "^5.0.0"
+  }
+}

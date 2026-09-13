@@ -8,6 +8,7 @@
     "test": "bun test"
   },
   "dependencies": {
+    "@agentmesh/llm": "workspace:*",
     "@agentmesh/shared": "workspace:*"
   }
 }

@@ -175,17 +175,19 @@ agentmesh/
 
 ### Tasks
 
-- [ ] Create Bun monorepo (workspaces in root `package.json`)
-- [ ] Configure TypeScript strict mode
-- [ ] Configure Biome (lint + format)
-- [ ] Configure Turborepo (`turbo.json`, task graph)
-- [ ] Create Next.js web app, initialize shadcn/ui in it
-- [ ] Create shared package
-- [ ] Add environment variable validation
-- [ ] Add `.env.example`
-- [ ] Add Git repository
+- [x] Create Bun monorepo (workspaces in root `package.json`)
+- [x] Configure TypeScript strict mode
+- [x] Configure Biome (lint + format)
+- [x] Configure Turborepo (`turbo.json`, task graph)
+- [x] Create Next.js web app, initialize shadcn/ui in it
+- [x] Create shared package (`packages/shared` — `Agent`/`AgentInput`/`AgentResult` types live here already)
+- [x] Add environment variable validation (`packages/config` — Zod schema)
+- [x] Add `.env.example`
+- [x] Add Git repository (pushed to GitHub: https://github.com/suniljma97/AgentMesh)
 - [ ] Pick a small real repository for the later end-to-end demo (own toy repo or a simple OSS repo)
-- [ ] Scaffold empty `prompts/`, `eval/`, and `packages/db/` folders
+- [x] Scaffold empty `prompts/`, `eval/`, and `packages/db/` folders
+
+**Status: Phase 0 essentially done** — only picking the demo repository is still open.
 
 ### Initial commands
 
@@ -230,6 +232,12 @@ Minimal `turbo.json`:
 # 7. Phase 1 — Gemini Agent
 
 **Time:** Day 1
+
+**Status: in progress.** `packages/llm` wraps Gemini via the Vercel AI SDK (`streamTask`) and
+`cli/index.ts` streams its output; `packages/shared` already has the `Agent`/`AgentInput`/
+`AgentResult` types from the interface below. Still open: wire `streamTask` behind an actual
+`Agent` implementation (returning `AgentResult`, not raw text chunks) and implement the Ollama
+branch, which currently throws `"Ollama provider is not yet implemented in Phase 1"`.
 
 First goal is deliberately simple:
 
@@ -305,13 +313,13 @@ This proves from day one that the core logic is UI-agnostic, and gives a much fa
 
 ### Success criteria
 
-- Gemini API works (via AI SDK)
-- Agent accepts a task
-- Agent returns structured output
-- Errors are handled cleanly
-- Agent runs end-to-end via the CLI, without the web app
-- Response streams token-by-token (`streamText`), visible live in CLI output
-- Swapping Gemini ⇄ Ollama requires no change to agent logic, only the env var
+- [x] Gemini API works (via AI SDK)
+- [ ] Agent accepts a task — `streamTask(task: string)` exists, but isn't wired into an `Agent` object yet
+- [ ] Agent returns structured output — currently yields raw text chunks, not `AgentResult`
+- [x] Errors are handled cleanly (try/catch in `cli/index.ts`)
+- [x] Agent runs end-to-end via the CLI, without the web app
+- [x] Response streams token-by-token (`streamText`), visible live in CLI output
+- [ ] Swapping Gemini ⇄ Ollama requires no change to agent logic, only the env var — Ollama branch is stubbed (throws) until implemented
 
 ---
 
@@ -1106,12 +1114,12 @@ Turborepo remote caching (optional, free tier available) speeds this up as the m
 AI SDK (Gemini / Ollama) → Agent → Streamed Response (via Bun CLI and web)
 ```
 
-- [ ] Gemini connected via Vercel AI SDK
-- [ ] Ollama fallback connected
-- [ ] Agent abstraction
-- [ ] Bun CLI entrypoint
-- [ ] Structured + streamed output
-- [ ] Error handling
+- [x] Gemini connected via Vercel AI SDK
+- [ ] Ollama fallback connected (stubbed, throws "not yet implemented")
+- [ ] Agent abstraction (types exist in `packages/shared`, not yet wired to `streamTask`)
+- [x] Bun CLI entrypoint
+- [x] Structured + streamed output (streamed ✅, structured `AgentResult` ⏳)
+- [x] Error handling
 
 ## Milestone 2 — Tools
 
