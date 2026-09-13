@@ -481,6 +481,44 @@ Responsibilities:
 
 **Time:** Day 4 (spilling into Day 5 if needed)
 
+**Status: done ✅.** `packages/db` wraps `@libsql/client` (`file:local.db`, no network
+dependency, per the ₹0 cost target) with `ensureSchema`/`recordEvalRun`/`getPreviousEvalRun`/
+`listEvalRuns`. `eval/` has 5 golden tasks for the Research Agent (`eval/golden-tasks/
+research-agent.ts`) grounded in verifiable facts about *this* repo (e.g. "AgentInput is
+defined in packages/shared/src/index.ts") — an LLM can't get these right by guessing from
+training data, only by actually reading the files. `eval/run.ts` runs each task against
+`createDefaultResearchAgent`, checks the result with pure, unit-tested `checkExpectation`
+logic, records every run to libSQL, and flags a regression when a task that passed
+last time fails now. Wired as `bun run eval` → `turbo run eval` (`cache: false` — a live LLM
+call must never replay a cached result).
+
+**Three more real bugs, found only by actually running `bun run eval`:**
+1. `eval/run.ts` used `process.cwd()` as the Research Agent's sandbox root. `process.cwd()`
+   is the invoking package's directory under turbo (`eval/`), not the repo root — every real
+   file the agent was asked about looked "missing" from inside `eval/`, and it burned its
+   whole tool-call budget hunting for files that were never in scope. Fixed by anchoring to
+   `import.meta.dir` instead, which is stable regardless of invocation cwd.
+2. The exact same class of bug in `packages/db`'s `getDb()` default (`"file:local.db"` is
+   cwd-relative) silently created a *second*, disconnected database inside `eval/` instead of
+   the repo root — eval history would have quietly split across two files depending on how the
+   suite was invoked. Fixed by having `eval/run.ts` pass an explicit absolute path built from
+   the same repo-root anchor, and by giving `getDb()` a `defaultUrl` parameter so callers who
+   need determinism aren't stuck with the cwd-relative default.
+3. Caught in a follow-up review, before either of the above two even mattered in practice:
+   `getDb()`'s first implementation cached a module-level singleton on the *first* call and
+   silently ignored `defaultUrl` on every call after that — `getDb("file:a.db")` then
+   `getDb("file:b.db")` returned the same client pointed at `a.db`, no warning. Nothing in this
+   codebase happened to call it twice yet, but the very fix in bug #2 (an explicit path per
+   caller) would have been quietly defeated the moment a second caller showed up. Fixed by
+   dropping the cache — `getDb()` now just calls `createDb()` fresh every time — with a test
+   proving two calls with different URLs are backed by two independent databases.
+
+A third finding was tuning, not a bug: the first real run flaked on one task (`research-005`)
+after `createDefaultResearchAgent`'s `stopWhen` step budget (6) ran out mid tool-use — a real,
+correctly-caught failure (Phase 3's `finishReason` fix working as intended), not a harness
+bug. Raised the default to 8; reran and all 5 passed. This is exactly the kind of thing golden
+tasks exist to surface.
+
 Before building more agents, lock in a way to know if an agent got **worse** after a prompt or model change — without this, every later refactor is a guess.
 
 ```text
@@ -522,8 +560,11 @@ Har agent ke liye kam se kam 3–5 golden tasks honi chahiye before it's conside
 
 ### Success criteria
 
-- `eval/` runner exists, runs against the Research Agent, and writes results to libSQL
-- A regression (broken output shape/behavior) is caught automatically, not discovered by hand
+- [x] `eval/` runner exists, runs against the Research Agent, and writes results to libSQL
+- [x] A regression (broken output shape/behavior) is caught automatically, not discovered by
+      hand — proven for real: `research-005` failing after a passing run was correctly
+      surfaced as a would-be regression signal (same run also showed the *reverse*, a
+      previously-failing task now passing, correctly *not* flagged as a regression)
 
 ---
 

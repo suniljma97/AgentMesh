@@ -18,6 +18,8 @@
     { "path": "./agents/research" },
     { "path": "./mcp/filesystem" },
     { "path": "./mcp/github" },
-    { "path": "./mcp/testing" }
+    { "path": "./mcp/testing" },
+    { "path": "./packages/db" },
+    { "path": "./eval" }
   ]
 }

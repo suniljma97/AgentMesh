@@ -9,7 +9,7 @@ export interface DefaultResearchAgentOptions {
   root: string;
   /** Called with each streamed chunk as the delegate LLM responds. */
   onChunk?: (chunk: string) => void;
-  /** Max tool-call + response steps before forcing a final answer. Default 6. */
+  /** Max tool-call + response steps before forcing a final answer. Default 8. */
   maxSteps?: number;
 }
 
@@ -23,7 +23,10 @@ export function createDefaultResearchAgent(
 ): Agent & { card: ResearchAgentCard } {
   const delegate = createLlmAgent({
     tools: createResearchTools({ root: options.root }),
-    stopWhen: stepCountIs(options.maxSteps ?? 6),
+    // 6 was too tight in practice (eval observed a real miss): list_files +
+    // search_code + a couple of read_file calls + a final answer can exceed
+    // it, especially if the model's first search doesn't land.
+    stopWhen: stepCountIs(options.maxSteps ?? 8),
     onChunk: options.onChunk,
   });
 

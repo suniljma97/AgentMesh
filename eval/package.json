@@ -1,0 +1,15 @@
+{
+  "name": "@agentmesh/eval",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "eval": "bun --env-file=../.env run run.ts",
+    "build": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@agentmesh/db": "workspace:*",
+    "@agentmesh/research-agent": "workspace:*",
+    "@agentmesh/shared": "workspace:*"
+  }
+}

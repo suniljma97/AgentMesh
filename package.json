@@ -8,7 +8,8 @@
     "cli",
     "agents/*",
     "packages/*",
-    "mcp/*"
+    "mcp/*",
+    "eval"
   ],
   "scripts": {
     "build": "turbo run build",

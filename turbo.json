@@ -9,7 +9,9 @@
       "persistent": true
     },
     "test": {},
-    "eval": {},
+    "eval": {
+      "cache": false
+    },
     "lint": {}
   }
 }
